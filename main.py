@@ -37,6 +37,15 @@ def main():
     # Test command
     test_parser = subparsers.add_parser('test', help='Test connections')
     
+    # API command
+    api_parser = subparsers.add_parser('api', help='Start Flask API server')
+    api_parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
+    api_parser.add_argument('--port', type=int, default=5000, help='Port to bind to')
+    api_parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    
+    # Setup command
+    setup_parser = subparsers.add_parser('setup', help='Setup database tables')
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -86,6 +95,30 @@ def main():
             
             print(f"✅ Database: {count:,} candles")
             print(f"✅ Binance: Latest close ${candle['close']:,.2f}" if candle else "❌ Binance failed")
+            
+        elif args.command == 'api':
+            from src.api.trading_api import app
+            print(f"🚀 Starting Quotex-AI API server on {args.host}:{args.port}")
+            print("📊 Available endpoints:")
+            print("  GET  / - Dashboard UI")
+            print("  GET  /health - Health check")
+            print("  POST/GET /predict - Get prediction")
+            print("  GET  /metrics - Model metrics")
+            print("  GET  /predictions - Get stored predictions")
+            print("  POST /feedback - Submit feedback")
+            print("  POST /bulk_predict - Multiple symbols")
+            print(f"🔗 Dashboard: http://{args.host}:{args.port}")
+            print(f"🔗 API Base: http://{args.host}:{args.port}/health")
+            app.run(host=args.host, port=args.port, debug=args.debug)
+            
+        elif args.command == 'setup':
+            db_client = SupabaseClient()
+            print("📋 Predictions table SQL:")
+            print(db_client.create_predictions_table_sql())
+            print("\n📋 Feedback table SQL:")
+            print(db_client.create_feedback_table_sql())
+            print("\n💡 Run this SQL in your Supabase SQL editor to create both tables.")
+            print("🔗 Go to: https://supabase.com/dashboard/project/[YOUR_PROJECT]/sql/new")
             
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")

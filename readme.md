@@ -27,15 +27,16 @@ An autonomous AI trading system designed to predict the next 1-minute candle (UP
 
 ---
 
-## 🚀 Current Status: Phase 3 Completed ✅
+## 🚀 Current Status: Phase 4 Completed ✅
 
-**Latest Achievement**: First production-ready ML model trained and evaluated
+**Latest Achievement**: Complete Flask API with Beautiful Web Dashboard
 - **Model Accuracy**: 52.9% on test data
 - **Model Type**: LightGBM Classifier
 - **Dataset**: 820 sequences × 5,943 features
 - **Performance**: Better at detecting DOWN moves (74% recall) vs UP moves (32% recall)
+- **Dashboard**: Real-time predictions, metrics, and feedback system
 
-Next: **Phase 4 - FastAPI Integration**
+Next: **Phase 5 - Advanced Features & Optimization**
 
 ---
 
@@ -69,11 +70,12 @@ Next: **Phase 4 - FastAPI Integration**
 
 ## 🛠️ In Progress / To Do
 
-### Phase 4 - Flask API Integration (Next)
-- `/predict` endpoint for real-time predictions (already scaffolded in trading_api.py)
-- `/feedback` endpoint for model improvement
-- `/metrics` endpoint for performance tracking
-- Live candle integration with existing Binance fetcher
+### Phase 4 - Flask API Integration ✅
+- ✅ `/predict` endpoint for real-time predictions
+- ✅ `/feedback` endpoint for model improvement
+- ✅ `/metrics` endpoint for performance tracking
+- ✅ Live candle integration with existing Binance fetcher
+- ✅ **Beautiful Web Dashboard** with real-time predictions and metrics
 
 ### Future Phases
 - Feedback loop for learning from mistakes
@@ -99,6 +101,157 @@ src/
 ├── core/          → Agent pipeline (future)
 ├── utils/         → Config, logging, helpers
 └── artifacts/     → Trained models & evaluation results
+```
+
+---
+
+## 🖥️ CLI Commands
+
+### Main CLI Interface (`main.py`)
+
+#### Data Collection Commands
+```bash
+# Start real-time data collection
+python main.py collect [--symbol SYMBOL] [--max-iterations MAX_ITERATIONS]
+
+# Store historical data (last 7 days by default)
+python main.py store_past_data [--symbol SYMBOL] [--days DAYS]
+
+# Check data status
+python main.py status [--symbol SYMBOL]
+
+# Test connections
+python main.py test
+```
+
+#### Feature Engineering Commands
+```bash
+# Generate labeled sequences (creates CSV file)
+python main.py label [--symbol SYMBOL] [--output OUTPUT]
+```
+
+#### API Commands
+```bash
+# Start Flask API server with dashboard
+python main.py api [--host HOST] [--port PORT] [--debug]
+```
+
+### Training Commands (Direct Script Execution)
+
+#### Basic Model Training
+```bash
+# Train LightGBM model
+python src/models/train_model.py
+```
+- Loads data from `data/firstdataset.csv`
+- Trains LightGBM classifier
+- Saves model to `artifacts/model_v1_lgb.pkl`
+
+#### Hyperparameter Optimization
+```bash
+# Run Optuna hyperparameter optimization
+python src/models/tuning_optuna.py
+```
+- Runs 50 trials of hyperparameter optimization
+- Saves best parameters to `artifacts/best_params_optuna_[timestamp].json`
+- Saves study object for later use
+
+#### Model Evaluation
+```bash
+# Evaluate trained model
+python src/models/eval_model.py
+```
+- Loads trained model
+- Evaluates on test data
+- Shows performance metrics and visualizations
+
+### Complete Workflow Example
+
+```bash
+# 1. Set up virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1  # Windows PowerShell
+pip install -r requirements.txt
+
+# 2. Collect historical data
+python main.py store_past_data --symbol BTCUSDT --days 7
+
+# 3. Create labeled sequences (CSV)
+python main.py label --symbol BTCUSDT
+
+# 4. Train the model
+python src/models/train_model.py
+
+# 5. (Optional) Optimize hyperparameters
+python src/models/tuning_optuna.py
+
+# 6. Evaluate the model
+python src/models/eval_model.py
+
+# 7. Start the API server with dashboard
+python main.py api --debug
+
+# 8. Open dashboard in browser
+# Go to: http://localhost:5000
+```
+
+### Command Examples
+
+```bash
+# Quick start - get last 7 days of BTCUSDT data
+python main.py store_past_data
+
+# Check how much data you have
+python main.py status --symbol BTCUSDT
+
+# Create CSV with custom filename
+python main.py label --symbol BTC/USDT --output my_training_data.csv
+
+# Start collecting real-time data with max 1000 iterations
+python main.py collect --symbol BTCUSDT --max-iterations 1000
+
+# Test all connections
+python main.py test
+
+# Start API server on custom port
+python main.py api --port 8080 --debug
+
+# Start API server on localhost only
+python main.py api --host 127.0.0.1 --debug
+```
+
+### API Endpoints (when server is running)
+
+```bash
+# Dashboard UI
+GET http://localhost:5000/
+
+# Health check
+GET http://localhost:5000/health
+
+# Get prediction
+GET http://localhost:5000/predict?symbol=BTCUSDT
+POST http://localhost:5000/predict
+{
+  "symbol": "BTCUSDT"
+}
+
+# Get model metrics
+GET http://localhost:5000/metrics
+
+# Submit feedback
+POST http://localhost:5000/feedback
+{
+  "symbol": "BTCUSDT",
+  "actual_result": "UP",
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+
+# Bulk predictions
+POST http://localhost:5000/bulk_predict
+{
+  "symbols": ["BTCUSDT", "ETHUSDT", "ADAUSDT"]
+}
 ```
 
 ---

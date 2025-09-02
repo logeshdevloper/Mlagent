@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                        warning: '#f59e0b'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">
+                <i class="fas fa-brain text-primary"></i> AI Trading Dashboard
+            </h1>
+            <p class="text-gray-300">Real-time cryptocurrency predictions powered by machine learning</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Prediction Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-chart-line text-primary"></i> Live Prediction
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex gap-3">
+                        <select id="symbolSelect" class="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white">
+                            <option value="BTC/USDT">BTC/USDT</option>
+                            <option value="ETH/USDT">ETH/USDT</option>
+                            <option value="ADA/USDT">ADA/USDT</option>
+                            <option value="DOT/USDT">DOT/USDT</option>
+                        </select>
+                        <button onclick="getPrediction()" class="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-sync-alt"></i> Predict
+                        </button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="predictionLoading" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p class="text-gray-300">Analyzing market data...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="predictionError" class="hidden bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-300"></div>
+
+                    <!-- Prediction Result -->
+                    <div id="predictionResult" class="hidden space-y-4">
+                        <div class="text-center">
+                            <div id="predictionDirection" class="text-6xl font-bold mb-4"></div>
+                            <div class="bg-white/10 rounded-lg p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-300">Confidence</span>
+                                    <span id="confidenceText" class="text-white font-semibold"></span>
+                                </div>
+                                <div class="w-full bg-gray-700 rounded-full h-2">
+                                    <div id="confidenceFill" class="bg-gradient-to-r from-primary to-blue-400 h-2 rounded-full transition-all duration-500"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white/10 rounded-lg p-4">
+                                <div class="text-gray-400 text-sm">Current Price</div>
+                                <div id="currentPrice" class="text-white font-semibold text-lg"></div>
+                            </div>
+                            <div class="bg-white/10 rounded-lg p-4">
+                                <div class="text-gray-400 text-sm">Predicted Price</div>
+                                <div id="predictedPrice" class="text-white font-semibold text-lg"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="text-gray-400 text-sm mb-2">Market Context</div>
+                            <div id="marketContext" class="text-white text-sm"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-chart-bar text-primary"></i> Model Metrics
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex gap-3">
+                        <button onclick="getMetrics()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button onclick="getPerformance()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-tachometer-alt"></i> Performance
+                        </button>
+                        <button onclick="testModelBias()" class="bg-warning hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-balance-scale"></i> Test Bias
+                        </button>
+                    </div>
+
+                    <div id="metricsLoading" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                        <p class="text-gray-300 text-sm">Loading metrics...</p>
+                    </div>
+
+                    <div id="metricsError" class="hidden bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-300"></div>
+
+                    <div id="metricsGrid" class="hidden grid grid-cols-2 gap-4">
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="accuracy" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">Accuracy</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="downRecall" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">DOWN Recall</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="upRecall" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">UP Recall</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="totalPredictions" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">Total Predictions</div>
+                        </div>
+                    </div>
+
+                    <div id="performanceSection" class="hidden space-y-4">
+                        <h3 class="text-lg font-semibold text-white">Performance Stats</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white/10 rounded-lg p-4 text-center">
+                                <div id="avgProcessingTime" class="text-xl font-bold text-white">-</div>
+                                <div class="text-gray-400 text-sm">Avg Time (ms)</div>
+                            </div>
+                            <div class="bg-white/10 rounded-lg p-4 text-center">
+                                <div id="cacheHitRate" class="text-xl font-bold text-white">-</div>
+                                <div class="text-gray-400 text-sm">Cache Hit Rate</div>
+                            </div>
+                        </div>
+                        <div id="performanceStatus" class="bg-white/10 rounded-lg p-4 text-center"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-comment-dots text-primary"></i> Prediction Feedback
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-300 text-sm mb-2">Symbol</label>
+                            <select id="feedbackSymbol" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white">
+                                <option value="BTC/USDT">BTC/USDT</option>
+                                <option value="ETH/USDT">ETH/USDT</option>
+                                <option value="ADA/USDT">ADA/USDT</option>
+                                <option value="DOT/USDT">DOT/USDT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm mb-2">Actual Result</label>
+                            <select id="actualResult" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white">
+                                <option value="UP">UP</option>
+                                <option value="DOWN">DOWN</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button onclick="submitFeedback()" class="w-full bg-success hover:bg-green-600 text-white py-3 rounded-lg transition-colors">
+                        <i class="fas fa-paper-plane"></i> Submit Feedback
+                    </button>
+                    
+                    <div id="feedbackSuccess" class="hidden bg-green-500/20 border border-green-500/50 rounded-lg p-4 text-green-300 text-center">
+                        Feedback submitted successfully!
+                    </div>
+                    <div id="feedbackError" class="hidden bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-300"></div>
+                </div>
+            </div>
+
+            <!-- History Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-history text-primary"></i> Prediction History
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex gap-3">
+                        <button onclick="loadStoredPredictions()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-sync-alt"></i> Load from DB
+                        </button>
+                        <button onclick="loadHistory()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-clock"></i> Session History
+                        </button>
+                    </div>
+                    
+                    <div id="predictionHistory" class="space-y-3 max-h-96 overflow-y-auto">
+                        <p class="text-center text-gray-400 py-8">
+                            No predictions yet. Get your first prediction!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let predictionHistory = [];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            getMetrics();
+            getPerformance();
+            loadStoredPredictions();
+        });
+
+        async function getPrediction() {
+            const symbol = document.getElementById('symbolSelect').value;
+            const loading = document.getElementById('predictionLoading');
+            const result = document.getElementById('predictionResult');
+            const error = document.getElementById('predictionError');
+
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            error.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ symbol: symbol })
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const prediction = data.data;
+                    displayPrediction(prediction);
+                    addToHistory(prediction);
+                } else {
+                    throw new Error(data.error || 'Prediction failed');
+                }
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayPrediction(prediction) {
+            const direction = document.getElementById('predictionDirection');
+            const confidenceFill = document.getElementById('confidenceFill');
+            const confidenceText = document.getElementById('confidenceText');
+            const currentPrice = document.getElementById('currentPrice');
+            const predictedPrice = document.getElementById('predictedPrice');
+            const marketContext = document.getElementById('marketContext');
+            const result = document.getElementById('predictionResult');
+
+            // Set prediction direction with color
+            direction.textContent = prediction.prediction;
+            direction.className = `text-6xl font-bold mb-4 ${prediction.prediction === 'UP' ? 'text-success' : 'text-danger'}`;
+            
+            // Set confidence
+            const confidencePercent = (prediction.confidence * 100).toFixed(1);
+            confidenceFill.style.width = `${confidencePercent}%`;
+            confidenceText.textContent = `${confidencePercent}%`;
+            
+            // Set prices
+            currentPrice.textContent = `$${prediction.current_price.toLocaleString()}`;
+            if (prediction.predicted_price) {
+                predictedPrice.textContent = `$${prediction.predicted_price.toLocaleString()}`;
+            } else {
+                predictedPrice.textContent = 'N/A';
+            }
+            
+            // Set market context
+            if (prediction.market_context) {
+                const context = prediction.market_context;
+                marketContext.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div><span class="text-gray-400">Trend:</span> ${context.trend}</div>
+                        <div><span class="text-gray-400">Volatility:</span> ${context.volatility}</div>
+                        <div><span class="text-gray-400">Volume:</span> ${context.volume_trend}</div>
+                        <div><span class="text-gray-400">Change:</span> ${context.price_change_10min}%</div>
+                    </div>
+                `;
+            }
+
+            result.classList.remove('hidden');
+        }
+
+        async function getMetrics() {
+            const loading = document.getElementById('metricsLoading');
+            const grid = document.getElementById('metricsGrid');
+            const error = document.getElementById('metricsError');
+
+            loading.classList.remove('hidden');
+            grid.classList.add('hidden');
+            error.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/metrics`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayMetrics(data.data);
+                } else {
+                    throw new Error(data.error || 'Failed to load metrics');
+                }
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayMetrics(metrics) {
+            document.getElementById('accuracy').textContent = `${(metrics.model_info.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('downRecall').textContent = `${(metrics.model_capabilities.down_detection_recall * 100).toFixed(1)}%`;
+            document.getElementById('upRecall').textContent = `${(metrics.model_capabilities.up_detection_recall * 100).toFixed(1)}%`;
+            document.getElementById('totalPredictions').textContent = metrics.live_performance.total_predictions;
+            
+            document.getElementById('metricsGrid').classList.remove('hidden');
+        }
+
+        async function getPerformance() {
+            const loading = document.getElementById('metricsLoading');
+            const performanceSection = document.getElementById('performanceSection');
+            const error = document.getElementById('metricsError');
+
+            loading.classList.remove('hidden');
+            performanceSection.classList.add('hidden');
+            error.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/performance`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayPerformance(data.data);
+                } else {
+                    throw new Error(data.error || 'Failed to load performance stats');
+                }
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayPerformance(data) {
+            const perf = data.performance;
+            const status = document.getElementById('performanceStatus');
+            
+            document.getElementById('avgProcessingTime').textContent = perf.avg_processing_time_ms || '0';
+            document.getElementById('cacheHitRate').textContent = `${((perf.cache_hit_rate || 0) * 100).toFixed(1)}%`;
+            
+            if (data.real_time_ready) {
+                status.innerHTML = `<i class="fas fa-check-circle text-success"></i> ${data.recommendation}`;
+                status.className = 'bg-green-500/20 border border-green-500/50 rounded-lg p-4 text-center text-green-300';
+            } else {
+                status.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> ${data.recommendation}`;
+                status.className = 'bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 text-center text-yellow-300';
+            }
+            
+            document.getElementById('performanceSection').classList.remove('hidden');
+        }
+
+        async function testModelBias() {
+            const symbol = document.getElementById('symbolSelect').value;
+            const loading = document.getElementById('metricsLoading');
+            const error = document.getElementById('metricsError');
+
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/test_bias?symbol=${symbol}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayBiasResults(data.data);
+                } else {
+                    throw new Error(data.error || 'Failed to test model bias');
+                }
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayBiasResults(biasData) {
+            const performanceSection = document.getElementById('performanceSection');
+            
+            performanceSection.innerHTML = `
+                <h3 class="text-lg font-semibold text-white mb-4">Model Bias Analysis</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-white/10 rounded-lg p-4 text-center">
+                        <div class="text-xl font-bold text-white">${biasData.up_predictions}/${biasData.total_predictions}</div>
+                        <div class="text-gray-400 text-sm">UP Predictions</div>
+                        <div class="text-xs text-gray-500">${biasData.up_percentage.toFixed(1)}%</div>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-4 text-center">
+                        <div class="text-xl font-bold text-white">${biasData.down_predictions}/${biasData.total_predictions}</div>
+                        <div class="text-gray-400 text-sm">DOWN Predictions</div>
+                        <div class="text-xs text-gray-500">${biasData.down_percentage.toFixed(1)}%</div>
+                    </div>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="text-sm text-gray-300 mb-2">Average Probabilities:</div>
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div><span class="text-gray-400">UP:</span> ${(biasData.avg_up_probability * 100).toFixed(1)}%</div>
+                        <div><span class="text-gray-400">DOWN:</span> ${(biasData.avg_down_probability * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <span class="text-sm font-semibold ${biasData.model_bias === 'DOWN' ? 'text-danger' : 'text-success'}">
+                            Model Bias: ${biasData.model_bias}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            performanceSection.classList.remove('hidden');
+        }
+
+        async function submitFeedback() {
+            const symbol = document.getElementById('feedbackSymbol').value;
+            const actualResult = document.getElementById('actualResult').value;
+            const success = document.getElementById('feedbackSuccess');
+            const error = document.getElementById('feedbackError');
+
+            try {
+                const response = await fetch(`${API_BASE}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        actual_result: actualResult,
+                        prediction_timestamp: new Date().toISOString()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    success.classList.remove('hidden');
+                    error.classList.add('hidden');
+                    setTimeout(() => success.classList.add('hidden'), 3000);
+                } else {
+                    throw new Error(data.error || 'Failed to submit feedback');
+                }
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.classList.remove('hidden');
+                success.classList.add('hidden');
+            }
+        }
+
+        function addToHistory(prediction) {
+            predictionHistory.unshift({
+                ...prediction,
+                timestamp: new Date().toLocaleTimeString()
+            });
+
+            if (predictionHistory.length > 10) {
+                predictionHistory.pop();
+            }
+
+            displayHistory();
+        }
+
+        function displayHistory() {
+            const historyContainer = document.getElementById('predictionHistory');
+            
+            if (predictionHistory.length === 0) {
+                historyContainer.innerHTML = '<p class="text-center text-gray-400 py-8">No predictions yet. Get your first prediction!</p>';
+                return;
+            }
+
+            historyContainer.innerHTML = predictionHistory.map(pred => `
+                <div class="bg-white/10 rounded-lg p-4 border border-white/20">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="font-semibold text-white">${pred.prediction}</span>
+                                <span class="text-sm text-gray-400">(${(pred.confidence * 100).toFixed(1)}%)</span>
+                                <span class="text-xs text-gray-500">${pred.symbol}</span>
+                            </div>
+                            <div class="text-sm text-gray-300">${pred.timestamp}</div>
+                            <div class="text-xs text-gray-400 mt-1">
+                                <i class="fas fa-clock"></i> ${pred.processing_time_ms || 'N/A'}ms
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-white font-semibold">$${pred.current_price.toLocaleString()}</div>
+                            ${pred.predicted_price ? `<div class="text-sm text-gray-400">$${pred.predicted_price.toLocaleString()}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadHistory() {
+            displayHistory();
+        }
+
+        async function loadStoredPredictions() {
+            const symbol = document.getElementById('symbolSelect').value;
+            const historyContainer = document.getElementById('predictionHistory');
+            
+            historyContainer.innerHTML = '<p class="text-center text-gray-400 py-8">Loading predictions from database...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/predictions?symbol=${symbol}&limit=20`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayStoredPredictions(data.data.predictions);
+                } else {
+                    throw new Error(data.error || 'Failed to load predictions');
+                }
+            } catch (err) {
+                historyContainer.innerHTML = `<p class="text-center text-red-400 py-8">Error: ${err.message}</p>`;
+            }
+        }
+
+        function displayStoredPredictions(predictions) {
+            const historyContainer = document.getElementById('predictionHistory');
+            
+            if (predictions.length === 0) {
+                historyContainer.innerHTML = '<p class="text-center text-gray-400 py-8">No stored predictions found.</p>';
+                return;
+            }
+
+            historyContainer.innerHTML = predictions.map(pred => {
+                const timestamp = new Date(pred.prediction_timestamp).toLocaleString();
+                const actualResult = pred.prediction_correct !== null ? 
+                    (pred.prediction_correct ? '✅ Correct' : '❌ Wrong') : '';
+                
+                return `
+                    <div class="bg-white/10 rounded-lg p-4 border border-white/20">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-semibold text-white">${pred.predicted_direction}</span>
+                                    <span class="text-sm text-gray-400">(${(pred.confidence * 100).toFixed(1)}%)</span>
+                                    <span class="text-xs text-gray-500">${pred.symbol}</span>
+                                </div>
+                                <div class="text-sm text-gray-300">${timestamp}</div>
+                                <div class="text-xs text-gray-400 mt-1">
+                                    <i class="fas fa-clock"></i> ${pred.processing_time_ms || 'N/A'}ms
+                                    ${pred.predicted_price ? `• $${pred.predicted_price.toLocaleString()}` : ''}
+                                    ${actualResult ? `• ${actualResult}` : ''}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-white font-semibold">$${pred.current_price.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Auto-refresh metrics every 30 seconds
+        setInterval(getMetrics, 30000);
+    </script>
+</body>
+</html>
