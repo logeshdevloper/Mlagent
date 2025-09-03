@@ -1,0 +1,14 @@
+Flask
+flask-cors
+python-dotenv
+mysql-connector-python
+lightgbm
+xgboost
+pandas
+plotly
+
+ccxt==4.2.18
+supabase==1.0.3
+pandas==2.1.4
+python-dotenv==1.0.0
+requests==2.31.0

@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zone-Based Trading Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                        warning: '#f59e0b'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">
+                <i class="fas fa-chart-line text-primary"></i> Zone-Based Trading System
+            </h1>
+            <p class="text-gray-300">80% Accuracy Target • 15-Minute Candles • 1-Hour Sessions</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Session Management Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-clock text-primary"></i> Trading Session
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Session Controls -->
+                    <div class="flex gap-3">
+                        <select id="sessionSymbol" class="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white">
+                            <option value="BTC/USDT">BTC/USDT</option>
+                            <option value="ETH/USDT">ETH/USDT</option>
+                            <option value="SOL/USDT">SOL/USDT</option>
+                        </select>
+                        <button onclick="startSession()" class="bg-success hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-play"></i> Start
+                        </button>
+                        <button onclick="updateSession()" class="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-sync"></i> Update
+                        </button>
+                        <button onclick="endSession()" class="bg-danger hover:bg-red-600 text-white px-6 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-stop"></i> End
+                        </button>
+                    </div>
+
+                    <!-- Session Status -->
+                    <div id="sessionStatus" class="hidden">
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-gray-300">Session Status</span>
+                                <span id="sessionActive" class="text-success font-semibold">ACTIVE</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span class="text-gray-400">Time Remaining:</span>
+                                    <div id="timeRemaining" class="text-white font-semibold">--:--</div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Signals Used:</span>
+                                    <div id="signalsUsed" class="text-white font-semibold">0/5</div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Session ID:</span>
+                                    <div id="sessionId" class="text-white text-xs">-</div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Accuracy:</span>
+                                    <div id="sessionAccuracy" class="text-white font-semibold">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Messages -->
+                    <div id="sessionMessages" class="hidden bg-white/10 rounded-lg p-4"></div>
+                </div>
+            </div>
+
+            <!-- Zone Prediction Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-bullseye text-primary"></i> Zone Predictions
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex gap-3">
+                        <select id="zoneSymbol" class="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white">
+                            <option value="BTC/USDT">BTC/USDT</option>
+                            <option value="ETH/USDT">ETH/USDT</option>
+                            <option value="SOL/USDT">SOL/USDT</option>
+                        </select>
+                        <button onclick="getZonePrediction()" class="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-chart-area"></i> Get Zones
+                        </button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="zoneLoading" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p class="text-gray-300">Calculating zones...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="zoneError" class="hidden bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-300"></div>
+
+                    <!-- Zone Result -->
+                    <div id="zoneResult" class="hidden space-y-4">
+                        <!-- Confidence Display -->
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-300">Zone Confidence</span>
+                                <span id="zoneConfidence" class="text-white font-semibold"></span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div id="confidenceFill" class="bg-gradient-to-r from-primary to-blue-400 h-2 rounded-full transition-all duration-500"></div>
+                            </div>
+                            <div id="tradeableStatus" class="mt-2 text-center text-sm"></div>
+                        </div>
+
+                        <!-- Support Zone -->
+                        <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                            <div class="text-green-400 font-semibold mb-2">
+                                <i class="fas fa-arrow-down"></i> Support Zone
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span class="text-gray-400">Range:</span>
+                                    <div id="supportRange" class="text-white">-</div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Strength:</span>
+                                    <div id="supportStrength" class="text-white">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resistance Zone -->
+                        <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                            <div class="text-red-400 font-semibold mb-2">
+                                <i class="fas fa-arrow-up"></i> Resistance Zone
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span class="text-gray-400">Range:</span>
+                                    <div id="resistanceRange" class="text-white">-</div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Strength:</span>
+                                    <div id="resistanceStrength" class="text-white">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Current Price & Recommendation -->
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span class="text-gray-400">Current Price:</span>
+                                    <div id="currentPrice" class="text-white font-semibold text-lg">-</div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Action:</span>
+                                    <div id="recommendedAction" class="text-white font-semibold text-lg">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trading Signals Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-signal text-primary"></i> Active Signals
+                </h2>
+                
+                <div id="signalsList" class="space-y-3 max-h-96 overflow-y-auto">
+                    <p class="text-center text-gray-400 py-8">
+                        No active signals. Start a session to receive signals.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Zone Accuracy Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fas fa-chart-bar text-primary"></i> Zone Accuracy Stats
+                </h2>
+                
+                <div class="space-y-4">
+                    <button onclick="getZoneAccuracy()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt"></i> Refresh Stats
+                    </button>
+
+                    <div id="accuracyLoading" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                        <p class="text-gray-300 text-sm">Loading stats...</p>
+                    </div>
+
+                    <div id="accuracyStats" class="hidden grid grid-cols-2 gap-4">
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="targetAccuracy" class="text-2xl font-bold text-white">80%</div>
+                            <div class="text-gray-400 text-sm">Target</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="currentAccuracy" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">Current</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="totalPredictions" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">Total Zones</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4 text-center">
+                            <div id="correctPredictions" class="text-2xl font-bold text-white">-</div>
+                            <div class="text-gray-400 text-sm">Hits</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session History -->
+        <div class="mt-6 bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+            <h2 class="text-xl font-semibold text-white mb-4">
+                <i class="fas fa-history text-primary"></i> Session History
+            </h2>
+            
+            <div id="sessionHistory" class="space-y-3 max-h-96 overflow-y-auto">
+                <p class="text-center text-gray-400 py-8">
+                    No session history available.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let currentSession = null;
+        let sessionTimer = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            getZoneAccuracy();
+            checkActiveSession();
+        });
+
+        // Session Management Functions
+        async function startSession() {
+            const symbol = document.getElementById('sessionSymbol').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/session/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ symbol: symbol })
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    currentSession = data;
+                    displaySessionStatus(data);
+                    showMessage('Session started successfully!', 'success');
+                    
+                    // Auto-update session every 30 seconds
+                    if (sessionTimer) clearInterval(sessionTimer);
+                    sessionTimer = setInterval(updateSession, 30000);
+                } else {
+                    showMessage(data.message || 'Failed to start session', 'error');
+                }
+            } catch (err) {
+                showMessage(`Error: ${err.message}`, 'error');
+            }
+        }
+
+        async function updateSession() {
+            const symbol = document.getElementById('sessionSymbol').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/session/update?symbol=${symbol}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displaySessionUpdate(data);
+                    if (data.new_signals && data.new_signals.length > 0) {
+                        displaySignals(data.new_signals);
+                    }
+                } else if (data.status === 'error') {
+                    showMessage(data.message, 'error');
+                }
+            } catch (err) {
+                console.error('Update session error:', err);
+            }
+        }
+
+        async function endSession() {
+            const symbol = document.getElementById('sessionSymbol').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/session/end`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ symbol: symbol })
+                });
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    displaySessionSummary(data);
+                    clearSessionStatus();
+                    if (sessionTimer) {
+                        clearInterval(sessionTimer);
+                        sessionTimer = null;
+                    }
+                } else {
+                    showMessage(data.message || 'Failed to end session', 'error');
+                }
+            } catch (err) {
+                showMessage(`Error: ${err.message}`, 'error');
+            }
+        }
+
+        async function checkActiveSession() {
+            try {
+                const response = await fetch(`${API_BASE}/session/status`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.active) {
+                    // Display active sessions
+                    Object.keys(data.data.active).forEach(symbol => {
+                        const session = data.data.active[symbol];
+                        if (session.status === 'active') {
+                            displaySessionStatus(session);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Check session error:', err);
+            }
+        }
+
+        // Zone Prediction Functions
+        async function getZonePrediction() {
+            const symbol = document.getElementById('zoneSymbol').value;
+            const loading = document.getElementById('zoneLoading');
+            const result = document.getElementById('zoneResult');
+            const error = document.getElementById('zoneError');
+
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            error.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/predict_zones?symbol=${symbol}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayZones(data.data);
+                } else {
+                    throw new Error(data.message || 'Failed to get zones');
+                }
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayZones(zones) {
+            const result = document.getElementById('zoneResult');
+            
+            // Confidence
+            const confidencePercent = (zones.confidence * 100).toFixed(1);
+            document.getElementById('zoneConfidence').textContent = `${confidencePercent}%`;
+            document.getElementById('confidenceFill').style.width = `${confidencePercent}%`;
+            
+            // Tradeable status
+            const tradeableStatus = document.getElementById('tradeableStatus');
+            if (zones.confidence >= 0.80) {
+                tradeableStatus.innerHTML = '<span class="text-success">✅ TRADEABLE - High Confidence</span>';
+            } else {
+                tradeableStatus.innerHTML = '<span class="text-warning">⚠️ LOW CONFIDENCE - Wait for better setup</span>';
+            }
+            
+            // Support Zone
+            if (zones.support_zone) {
+                const support = zones.support_zone;
+                document.getElementById('supportRange').textContent = 
+                    `$${support.range[0].toLocaleString()} - $${support.range[1].toLocaleString()}`;
+                document.getElementById('supportStrength').textContent = support.strength || 'N/A';
+            }
+            
+            // Resistance Zone
+            if (zones.resistance_zone) {
+                const resistance = zones.resistance_zone;
+                document.getElementById('resistanceRange').textContent = 
+                    `$${resistance.range[0].toLocaleString()} - $${resistance.range[1].toLocaleString()}`;
+                document.getElementById('resistanceStrength').textContent = resistance.strength || 'N/A';
+            }
+            
+            // Current Price & Recommendation
+            document.getElementById('currentPrice').textContent = `$${zones.current_price.toLocaleString()}`;
+            
+            const action = zones.recommendation?.action || 'WAIT';
+            const actionElement = document.getElementById('recommendedAction');
+            actionElement.textContent = action;
+            actionElement.className = `text-white font-semibold text-lg ${
+                action === 'BUY' ? 'text-success' : 
+                action === 'SELL' ? 'text-danger' : 
+                'text-warning'
+            }`;
+            
+            // Display signals if available
+            if (zones.signals && zones.signals.length > 0) {
+                displaySignals(zones.signals);
+            }
+            
+            result.classList.remove('hidden');
+        }
+
+        function displaySignals(signals) {
+            const signalsList = document.getElementById('signalsList');
+            
+            if (!signals || signals.length === 0) {
+                signalsList.innerHTML = '<p class="text-center text-gray-400 py-8">No active signals.</p>';
+                return;
+            }
+            
+            signalsList.innerHTML = signals.map(signal => `
+                <div class="bg-white/10 rounded-lg p-4 border ${
+                    signal.type === 'BUY_ZONE' ? 'border-green-500/50' : 'border-red-500/50'
+                }">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-semibold ${
+                                signal.type === 'BUY_ZONE' ? 'text-success' : 'text-danger'
+                            }">
+                                ${signal.type === 'BUY_ZONE' ? '📈 BUY' : '📉 SELL'} Signal
+                            </div>
+                            <div class="text-sm text-gray-300 mt-1">
+                                Entry: $${signal.entry_price.toLocaleString()}
+                            </div>
+                            <div class="text-sm text-gray-300">
+                                Target: $${signal.target.toLocaleString()}
+                            </div>
+                            <div class="text-sm text-gray-300">
+                                Stop: $${signal.stop_loss.toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-white font-semibold">
+                                ${(signal.confidence * 100).toFixed(1)}%
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                R:R ${signal.risk_reward.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function getZoneAccuracy() {
+            const loading = document.getElementById('accuracyLoading');
+            const stats = document.getElementById('accuracyStats');
+
+            loading.classList.remove('hidden');
+            stats.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/zone_accuracy`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayAccuracyStats(data.data);
+                }
+            } catch (err) {
+                console.error('Accuracy stats error:', err);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayAccuracyStats(stats) {
+            document.getElementById('currentAccuracy').textContent = `${(stats.current_accuracy * 100).toFixed(1)}%`;
+            document.getElementById('totalPredictions').textContent = stats.total_predictions || 0;
+            document.getElementById('correctPredictions').textContent = stats.correct_predictions || 0;
+            
+            const currentAccuracyEl = document.getElementById('currentAccuracy');
+            if (stats.current_accuracy >= 0.80) {
+                currentAccuracyEl.className = 'text-2xl font-bold text-success';
+            } else if (stats.current_accuracy >= 0.70) {
+                currentAccuracyEl.className = 'text-2xl font-bold text-warning';
+            } else {
+                currentAccuracyEl.className = 'text-2xl font-bold text-danger';
+            }
+            
+            document.getElementById('accuracyStats').classList.remove('hidden');
+        }
+
+        function displaySessionStatus(session) {
+            const statusDiv = document.getElementById('sessionStatus');
+            statusDiv.classList.remove('hidden');
+            
+            if (session.session_id) {
+                document.getElementById('sessionId').textContent = session.session_id;
+            }
+            
+            if (session.time_remaining) {
+                document.getElementById('timeRemaining').textContent = session.time_remaining;
+            }
+            
+            if (session.signals_remaining !== undefined) {
+                const used = 5 - session.signals_remaining;
+                document.getElementById('signalsUsed').textContent = `${used}/5`;
+            }
+            
+            if (session.session_accuracy) {
+                document.getElementById('sessionAccuracy').textContent = session.session_accuracy;
+            }
+        }
+
+        function displaySessionUpdate(update) {
+            if (update.time_remaining) {
+                document.getElementById('timeRemaining').textContent = update.time_remaining;
+            }
+            
+            if (update.signals_remaining !== undefined) {
+                const used = 5 - update.signals_remaining;
+                document.getElementById('signalsUsed').textContent = `${used}/5`;
+            }
+            
+            if (update.session_accuracy) {
+                document.getElementById('sessionAccuracy').textContent = update.session_accuracy;
+            }
+            
+            if (update.zone_hit) {
+                showMessage(`Zone hit: ${update.zone_hit.type} at $${update.zone_hit.price}`, 'success');
+            }
+        }
+
+        function displaySessionSummary(summary) {
+            const historyDiv = document.getElementById('sessionHistory');
+            
+            const summaryHTML = `
+                <div class="bg-white/10 rounded-lg p-4 border border-white/20 mb-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-semibold text-white">Session ${summary.session_id}</div>
+                            <div class="text-sm text-gray-300 mt-1">
+                                Duration: ${summary.duration}
+                            </div>
+                            <div class="text-sm text-gray-300">
+                                Accuracy: ${summary.performance.accuracy}
+                            </div>
+                            <div class="text-sm ${summary.performance.target_met ? 'text-success' : 'text-warning'}">
+                                Target ${summary.performance.target_met ? 'Met ✅' : 'Missed ⚠️'}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-white font-semibold">
+                                ${summary.performance.correct_predictions}/${summary.performance.predictions_made}
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                ${summary.zones_hit} zones hit
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-sm text-gray-300">
+                        ${summary.recommendation}
+                    </div>
+                </div>
+            `;
+            
+            historyDiv.innerHTML = summaryHTML + historyDiv.innerHTML;
+        }
+
+        function clearSessionStatus() {
+            document.getElementById('sessionStatus').classList.add('hidden');
+            document.getElementById('sessionActive').textContent = 'INACTIVE';
+            document.getElementById('timeRemaining').textContent = '--:--';
+            document.getElementById('signalsUsed').textContent = '0/5';
+            document.getElementById('sessionAccuracy').textContent = '-';
+        }
+
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('sessionMessages');
+            messagesDiv.classList.remove('hidden');
+            
+            const colorClass = type === 'success' ? 'text-success' : 
+                              type === 'error' ? 'text-danger' : 
+                              'text-warning';
+            
+            messagesDiv.innerHTML = `
+                <div class="${colorClass}">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+                    ${message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                messagesDiv.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
